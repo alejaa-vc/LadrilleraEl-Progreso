@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caso 11 — Ladrillera El Progreso · Estadística UNIPAZ</title>
+<style>
+:root{--bg:#f6f3ee;--fg:#2a2420;--mut:#7a6f66;--card:#fffdf9;--line:#e0d8cd;--acc:#a8432a;--ok:#2f6f4f;--bad:#b3261e;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1917;--fg:#efe9e2;--mut:#a39a91;--card:#26211e;--line:#3a332e;--acc:#e0826a;--ok:#6fbf92;--bad:#ee7b72;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 Georgia,"Times New Roman",serif}
+main{max-width:980px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:2.6rem;margin:.2em 0}h2{font-size:1.35rem;margin:2em 0 .6em}
+.sub{color:var(--mut)}
+dl.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 24px;margin:20px 0}
+dt{color:var(--mut);font-size:.85rem}dd{margin:0;font-weight:bold}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.k{background:var(--card);border:1px solid var(--line);padding:12px 14px;border-radius:6px}
+.k b{display:block;font-size:1.6rem}.k small{color:var(--mut)}
+.neg{color:var(--bad)}.pos{color:var(--ok)}
+.chart{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px;overflow-x:auto}
+svg{width:100%;min-width:560px;height:auto;display:block}
+svg text{fill:var(--mut);font:11px sans-serif}
+textarea{width:100%;height:140px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px;font:14px monospace}
+button,.btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;margin:8px 8px 0 0;text-decoration:none;display:inline-block}
+a{color:var(--acc)}
+.q{border-left:4px solid var(--acc);padding:4px 14px;background:var(--card)}
+@media print{button,.btn,textarea{display:none}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<main>
+<p class="sub">UNIPAZ · Ingeniería de Producción</p>
+<h1>Caso 11</h1>
+<p>Keilly Alejandra Velandia Cuello</p>
+<dl class="ficha">
+<div><dt>Empresa</dt><dd>Ladrillera El Progreso S.A.S.</dd></div>
+<div><dt>Sector</dt><dd>Construcción</dd></div>
+<div><dt>Proceso</dt><dd>Producción de ladrillos por turno</dd></div>
+<div><dt>Variable</dt><dd>Ladrillos producidos por turno (ladrillos/turno)</dd></div>
+<div><dt>¿Qué es mejor?</dt><dd>Mayor valor</dd></div>
+<div><dt>Límite (mínimo aceptable)</dt><dd id="lim">800 ladrillos/turno</dd></div>
+<div><dt>Meta de la empresa</dt><dd id="meta">950 ladrillos/turno</dd></div>
+<div><dt>Muestra</dt><dd id="nm">44 registros, en orden de toma</dd></div>
+</dl>
+<p class="sub">Estadística (840601) · Datos simulados; la empresa es ficticia.</p>
+<button onclick="window.print()">Imprimir ficha</button>
+
+<h2>Panorama del proceso</h2>
+<p id="resumen"></p>
+<a class="btn" href="https://indexhtml.base44.app/empresa">Paso 1 · Definir la empresa</a>
+<a class="btn" href="https://indexhtml.base44.app/datos">Análisis de los 12 meses</a>
+
+<h2>1. Medidas descriptivas</h2>
+<div class="grid" id="stats"></div>
+
+<h2>2. Distribución (datos agrupados, regla de Sturges)</h2>
+<p class="sub" id="sturges"></p>
+<div class="chart"><svg id="hist" viewBox="0 0 700 300"></svg></div>
+
+<h2>3. Gráfico de corrida frente al límite y la meta</h2>
+<div class="chart"><svg id="run" viewBox="0 0 700 300"></svg></div>
+
+<h2>4. Alternativas de mejora sugeridas</h2>
+<ol>
+<li>Mantener y documentar las buenas prácticas del proceso</li>
+<li>Investigar los datos atípicos</li>
+<li>Reducir los registros fuera de especificación</li>
+<li>Cerrar la brecha frente a la meta</li>
+<li>Dar el paso a la estadística inferencial</li>
+</ol>
+<p class="q"><b>Pregunta guía para el informe:</b> La producción tiene valores muy bajos ocasionales. ¿Qué causas externas (lluvia, materia prima, energía) podrían explicarlos y cómo lo mostrarías con un Pareto?</p>
+
+<h2>5. Datos del caso</h2>
+<p class="sub">Archivo de la ficha: 11_Keilly_Alejandra_Velandia_Cuello.csv. Puedes pegar otros valores o cargar un CSV y todo se recalcula.</p>
+<textarea id="datos"></textarea><br>
+<button onclick="calc()">Recalcular</button>
+<button onclick="document.getElementById('f').click()">Cargar archivo…</button>
+<input type="file" id="f" accept=".csv,.txt" hidden>
+</main>
+<script>
+const LIM=800,META=950;
+const D0=[839,744,957,874,855,869,887,874,857,837,901,863,825,925,844,886,912,658,948,724,872,887,847,885,916,931,815,912,876,671,960,861,848,816,906,884,702,889,812,854,831,898,875,876];
+const $=id=>document.getElementById(id);
+const fmt=(x,d=2)=>Number(x.toFixed(d)).toLocaleString('es-CO',{maximumFractionDigits:d});
+const q=(s,p)=>{const i=(s.length-1)*p,l=Math.floor(i);return s[l]+(s[Math.min(l+1,s.length-1)]-s[l])*(i-l)};
+const NS='http://www.w3.org/2000/svg';
+function el(p,t,a,txt){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;p.appendChild(e);return e}
+function calc(){
+  const x=$('datos').value.split(/[\s,;]+/).map(v=>parseFloat(v.replace(',','.'))).filter(v=>!isNaN(v));
+  if(x.length<3){alert('Ingresa al menos 3 valores numéricos.');return}
+  const n=x.length,s=[...x].sort((a,b)=>a-b),m=x.reduce((a,b)=>a+b)/n;
+  const sd=Math.sqrt(x.reduce((a,b)=>a+(b-m)**2,0)/(n-1));
+  const sk=n>2?n/((n-1)*(n-2))*x.reduce((a,b)=>a+((b-m)/sd)**3,0):0;
+  const med=q(s,.5),q1=q(s,.25),q3=q(s,.75),ric=q3-q1,mn=s[0],mx=s[n-1];
+  const cnt={};x.forEach(v=>cnt[v]=(cnt[v]||0)+1);const mc=Math.max(...Object.values(cnt));
+  const moda=Math.min(...Object.keys(cnt).filter(k=>cnt[k]==mc).map(Number));
+  const fuera=x.filter(v=>v<LIM).length;
+  const at=x.filter(v=>v<q1-1.5*ric||v>q3+1.5*ric).length;
+  const br=m-META;
+  $('nm').textContent=n+' registros, en orden de toma';
+  $('resumen').innerHTML='<b>Ladrillera El Progreso S.A.S.</b> — ladrillos producidos por turno: media de '+fmt(m,0)+' ladrillos/turno frente a una meta de '+META+'.';
+  const K=[
+    ['Media',fmt(m),'ladrillos/turno'],['Mediana',fmt(med),'Moda: '+fmt(moda)],
+    ['Desv. típica (s)',fmt(sd),'CV: '+fmt(sd/m*100)+' %'],
+    ['Asimetría',fmt(sk),sk<-.5?'Cola izquierda (valores bajos)':sk>.5?'Cola derecha (valores altos)':'Aprox. simétrica'],
+    ['Q1 / Q3',fmt(q1)+' / '+fmt(q3),'RIC: '+fmt(ric)],['Mín. / Máx.',fmt(mn,0)+' / '+fmt(mx,0),'n = '+n],
+    ['Fuera del límite',fuera+' ('+fmt(fuera/n*100,1)+' %)','Atípicos 1,5×RIC: '+at],
+    ['Brecha vs. meta',fmt(br),br<0?'Meta aún no cumplida':'Meta cumplida']];
+  $('stats').innerHTML=K.map((k,i)=>'<div class="k"><small>'+k[0]+'</small><b class="'+(i==7?(br<0?'neg':'pos'):'')+'">'+k[1]+'</b><small>'+k[2]+'</small></div>').join('');
+  // Agrupados (Sturges)
+  const k=Math.ceil(1+3.322*Math.log10(n)),A=(mx-mn)/k;
+  const f=Array(k).fill(0);x.forEach(v=>{let i=Math.floor((v-mn)/A);if(i>=k)i=k-1;f[i]++});
+  const mid=i=>mn+A*(i+.5);
+  const mg=f.reduce((a,c,i)=>a+c*mid(i),0)/n;
+  let acc=0,mi=0;for(let i=0;i<k;i++){if(acc+f[i]>=n/2){mi=i;break}acc+=f[i]}
+  const medg=mn+A*mi+(n/2-acc)/f[mi]*A;
+  const mo=f.indexOf(Math.max(...f)),d1=f[mo]-(f[mo-1]||0),d2=f[mo]-(f[mo+1]||0);
+  const mog=mn+A*mo+(d1+d2?d1/(d1+d2):.5)*A;
+  $('sturges').textContent='k = '+k+' clases · A = '+fmt(A)+' ladrillos/turno · Media agrupada '+fmt(mg)+' · Mediana '+fmt(medg)+' · Moda '+fmt(mog);
+  // Histograma
+  const H=$('hist');H.innerHTML='';const W=700,Ht=300,L=45,B=35,T=15,R=15,pw=W-L-R,ph=Ht-T-B,fm=Math.max(...f);
+  for(let i=0;i<=4;i++){const y=T+ph-ph*i/4;el(H,'line',{x1:L,x2:W-R,y1:y,y2:y,stroke:'var(--line)'});el(H,'text',{x:L-6,y:y+4,'text-anchor':'end'},Math.round(fm*i/4))}
+  const bw=pw/k;
+  f.forEach((c,i)=>{const h=ph*c/fm;el(H,'rect',{x:L+i*bw+2,y:T+ph-h,width:bw-4,height:h,fill:'var(--acc)',opacity:.85});
+    el(H,'text',{x:L+i*bw+bw/2,y:T+ph-h-4,'text-anchor':'middle'},c);
+    el(H,'text',{x:L+i*bw+bw/2,y:Ht-14,'text-anchor':'middle'},fmt(mn+A*i,0)+'–'+fmt(mn+A*(i+1),0))});
+  // Corrida
+  const R2=$('run');R2.innerHTML='';
+  const lo=Math.min(mn,LIM)-20,hi=Math.max(mx,META)+20,X=i=>L+pw*i/(n-1),Y=v=>T+ph-ph*(v-lo)/(hi-lo);
+  for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4,y=Y(v);el(R2,'line',{x1:L,x2:W-R,y1:y,y2:y,stroke:'var(--line)'});el(R2,'text',{x:L-6,y:y+4,'text-anchor':'end'},Math.round(v))}
+  el(R2,'line',{x1:L,x2:W-R,y1:Y(META),y2:Y(META),stroke:'var(--ok)','stroke-dasharray':'6 4'});el(R2,'text',{x:W-R,y:Y(META)-4,'text-anchor':'end'},'Meta '+META);
+  el(R2,'line',{x1:L,x2:W-R,y1:Y(LIM),y2:Y(LIM),stroke:'var(--bad)','stroke-dasharray':'6 4'});el(R2,'text',{x:W-R,y:Y(LIM)-4,'text-anchor':'end'},'Límite '+LIM);
+  el(R2,'line',{x1:L,x2:W-R,y1:Y(m),y2:Y(m),stroke:'var(--mut)'});el(R2,'text',{x:L+4,y:Y(m)-4},'Media '+fmt(m,0));
+  el(R2,'polyline',{points:x.map((v,i)=>X(i)+','+Y(v)).join(' '),fill:'none',stroke:'var(--acc)','stroke-width':1.5});
+  x.forEach((v,i)=>el(R2,'circle',{cx:X(i),cy:Y(v),r:3,fill:v<LIM?'var(--bad)':'var(--acc)'}));
+  el(R2,'text',{x:W/2,y:Ht-4,'text-anchor':'middle'},'Orden de toma (1 a '+n+')');
+}
+$('datos').value=D0.join('\n');
+$('f').addEventListener('change',e=>{const r=new FileReader();r.onload=()=>{$('datos').value=r.result;calc()};r.readAsText(e.target.files[0])});
+calc();
+</script>
+</body>
+</html>
